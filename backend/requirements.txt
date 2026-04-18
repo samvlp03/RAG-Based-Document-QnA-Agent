@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+pydantic-settings
+langchain
+langchain-chroma
+langchain-community
+chromadb
+pymupdf
+unstructured
+python-dotenv
+datasets
+ragas
+ollama
+langchain-ollama
