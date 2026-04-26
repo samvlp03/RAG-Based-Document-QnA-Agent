@@ -1,0 +1,70 @@
+import { useEffect, useState } from "react";
+import { supabase, isAuthEnabled } from "../lib/supabase";
+
+export default function useAuth() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isAuthEnabled) {
+      // Auth not configured — treat as logged-in dev user
+      setUser({
+        id: "local",
+        email: "dev@local",
+        user_metadata: { full_name: "Developer" },
+      });
+      setLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signInWithGoogle = () =>
+    supabase?.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+
+  const signInWithGitHub = () =>
+    supabase?.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: window.location.origin },
+    });
+
+  const signInWithEmail = (email, password) =>
+    supabase?.auth.signInWithPassword({ email, password });
+
+  const signUpWithEmail = (email, password) =>
+    supabase?.auth.signUp({ email, password });
+
+  const signOut = () => supabase?.auth.signOut().then(() => setUser(null));
+
+  const getToken = async () => {
+    if (!isAuthEnabled) return null;
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+  };
+
+  return {
+    user,
+    loading,
+    signInWithGoogle,
+    signInWithGitHub,
+    signInWithEmail,
+    signUpWithEmail,
+    signOut,
+    getToken,
+  };
+}

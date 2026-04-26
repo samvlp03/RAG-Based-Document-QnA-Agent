@@ -13,3 +13,4 @@ datasets
 ragas
 ollama
 langchain-ollama
+supabase

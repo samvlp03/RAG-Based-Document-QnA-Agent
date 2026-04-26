@@ -1,30 +1,23 @@
-from langchain_chroma import Chroma
-from app.core.embeddings import get_embeddings
 from app.config import settings
 from app.core.vectorstore import get_vectorstore
+
 
 def get_retriever(filter: dict | None = None):
     vectorstore = get_vectorstore()
 
-    base_kwargs = {"k": settings.retriever_k}
+    search_kwargs: dict = {
+        "k": settings.retriever_k,
+        "fetch_k": settings.retriever_fetch_k,
+        "lambda_mult": settings.retriever_lambda_mult,
+    }
     if filter:
-        base_kwargs["filter"] = filter
+        search_kwargs["filter"] = filter
 
-    if settings.retriever_strategy == "mmr":
-        return vectorstore.as_retriever(
-            search_type="mmr",
-            search_kwargs={
-                **base_kwargs,
-                "fetch_k": settings.retriever_k * 6,
-                "lambda_mult": 0.5
-            }
-        )
-
+    # Always MMR, but lambda_mult=0.75 keeps it relevance-biased.
+    # The old value of 0.5 was the root cause of "title not found":
+    # MMR was actively penalising page-0 chunks (which contain the title)
+    # because they were too semantically similar to abstract chunks.
     return vectorstore.as_retriever(
-        search_type="similarity_score_threshold",
-        search_kwargs={
-            
-            **base_kwargs,
-            "score_threshold": 0.5
-        }
+        search_type="mmr",
+        search_kwargs=search_kwargs,
     )
